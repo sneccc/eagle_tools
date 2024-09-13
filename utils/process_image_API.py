@@ -1,9 +1,9 @@
 import os
 from PIL import Image, ImageFile
 from concurrent.futures import ThreadPoolExecutor
-from Eagle_Tools.caption_utils import write_tags_file, prepare_content, remove_duplicate_phrases
-from Eagle_Tools.image_utils import resize_and_crop_to_fit, fill_transparent_with_color, center_crop_square, svg_scaling
-from Eagle_Tools.io_utils import ensure_directory_exists
+from .caption_utils import write_tags_file, prepare_content, remove_duplicate_phrases
+from .image_utils import resize_and_crop_to_fit, fill_transparent_with_color, center_crop_square, svg_scaling
+from .io_utils import ensure_directory_exists
 import cv2
 import numpy as np
 from .image_utils import resize_and_crop_to_fit_cv2
@@ -16,7 +16,7 @@ class ProcessImageAPI:
         self.config = config
         self.llm_processor = None
         if config.get('use_LLM', False):
-            from Eagle_Tools.LLM_API import AsyncLLMProcessor
+            from .LLM_API import AsyncLLMProcessor
             self.llm_processor = AsyncLLMProcessor(
                 add_tags=config.get('add_tags', False),
                 shuffle_content=config.get('shuffle_content', False)
