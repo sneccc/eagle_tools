@@ -138,3 +138,8 @@ def svg_scaling(image_path,max_side_length,output_path,do_center_square_crop,fli
 
     os.remove(image_path)
     return resized_img
+
+
+
+def process_image_batch(api_instance, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None):
+    api_instance.process_images(images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=augment)

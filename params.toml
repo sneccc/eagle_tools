@@ -1,0 +1,32 @@
+[general]
+pixelart = false
+append_filename_to_captions = true
+doBucketing = true
+isEsganUpscale = false
+usePilSave = false
+number_of_jobs = 16
+do_center_square_crop = false
+padding = "random(80, 100)"
+add_tags = false
+shuffle_content = false
+use_LLM = false
+
+
+[paths]
+input_path = "P:\\datasets\\wallhaven"
+
+
+[llm]
+add_tags = true
+shuffle_content = false
+
+[augment]
+list = [
+    { type = "prepend", value = "ohwx artstyle, ", probability = 1.0 }
+]
+
+[resolutions]
+target_resolutions = [
+    [1152, 896], [896, 1152], [1216, 832], [832, 1216],
+    [1344, 768], [768, 1344], [1536, 640], [640, 1536], [1024, 1024]
+]

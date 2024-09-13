@@ -1,6 +1,8 @@
 import random
 import re
 import os
+from config import use_LLM,llm_processor,add_tags,shuffle_content
+from io_utils import ensure_directory_exists
 
 def prepare_content(annotation, tags, add_tags=True, shuffle_content=False, augment=None):
     content_list = []
@@ -57,3 +59,19 @@ def write_tags_file(output_path, content_list):
     with open(output_path_txt, "w", encoding="utf-8") as f:
         f.write(content)
 
+def create_tags_file(annotation, tags, folder_path, output_path, augment=None):
+    output_extension = '.txt'
+    tags_file_name = f"{output_path}{output_extension}"
+    tags_file_path = os.path.join(folder_path, tags_file_name)
+    
+    ensure_directory_exists(os.path.dirname(tags_file_path))
+
+    if os.path.exists(tags_file_path):
+        return
+    
+    if use_LLM:
+        llm_processor.add_to_queue(folder_path, output_path, annotation, tags, augment)
+    else:
+        content = prepare_content(annotation, tags, add_tags, shuffle_content, augment=augment)
+        content = remove_duplicate_phrases(content)
+        write_tags_file(output_path=tags_file_path, content_list=[content])
