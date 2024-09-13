@@ -44,6 +44,27 @@ The main configuration options are set in the Eagle_extractor.ipynb notebook. Th
 - transformers
 - tqdm
 - numpy
+- cairosvg
+- nltk
+- joblib
+- asyncio
+- logging
+- concurrent.futures
+
+Additional dependencies that might be required based on the full codebase:
+
+- realesrgan_ncnn_py (for upscaling, if used)
+- multiprocessing
+- json
+- zipfile
+- shutil
+- random
+- re
+- math
+- io
+
+Ensure all dependencies are installed before using these utilities. You can install most of these using pip:
+
 
 Ensure all dependencies are installed before using these utilities.
 
