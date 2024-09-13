@@ -57,3 +57,6 @@ augment_list = config['augment']['list']
 
 # Resolutions
 target_resolutions = config['resolutions']['target_resolutions']
+
+
+gpuid = config['image_processing']['gpuid']

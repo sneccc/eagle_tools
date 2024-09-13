@@ -1,6 +1,6 @@
 [parallel_processing]
-number_of_jobs = 10
-batch_size = 10
+number_of_jobs = 1
+batch_size = 1
 
 [image_processing]
 do_center_square_crop = false
@@ -9,6 +9,8 @@ isEsganUpscale = false
 usePilSave = false
 doBucketing = true
 pixelart = false
+doUpscale = true
+gpuid = 0
 
 [caption_processing]
 add_tags = false
@@ -17,7 +19,7 @@ append_filename_to_captions = true
 rename = true
 
 [paths]
-input_path = "P:\\datasets\\wallhaven"
+input_path = "P:\\datasets\\hand drawn icons"
 
 [llm]
 use_LLM = false

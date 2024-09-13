@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import cv2
 import numpy as np
 import utils.config as config
+import utils.image_utils as image_utils
 
 
 Image.MAX_IMAGE_PIXELS = None
@@ -60,7 +61,7 @@ class ProcessImageAPI:
 
     def _process_svg(self, image_path, output_path):
         try:
-            import image_utils
+            import utils.image_utils as image_utils
             img = image_utils.svg_scaling(image_path, 1024, output_path, config.do_center_square_crop, 0.0)
             img.save(f"{os.path.splitext(output_path)[0]}.png", format='PNG', quality=98)
         except Exception as e:
@@ -68,6 +69,7 @@ class ProcessImageAPI:
 
     def _process_raster(self, image_path, output_path):
         try:
+            import utils.image_utils as image_utils
             # Read image with OpenCV
             img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
             
@@ -92,17 +94,7 @@ class ProcessImageAPI:
 
             # Handle RGBA images
             if img.shape[2] == 4:
-                # Check if alpha channel is valid
-                if np.all(img[:,:,3] == 0):
-                    # If alpha is all zero, treat as RGB
-                    img = img[:,:,:3]
-                else:
-                    # Fill transparent with color
-                    alpha = img[:,:,3]
-                    rgb = img[:,:,:3]
-                    background = np.full_like(rgb, config.padding)
-                    mask = alpha[:,:,np.newaxis] / 255.0
-                    img = (rgb * mask + background * (1 - mask)).astype(np.uint8)
+                img = image_utils.fill_transparent_with_color_cv2(img)
 
             # Center square crop (if applicable)
             if config.do_center_square_crop:
@@ -110,6 +102,11 @@ class ProcessImageAPI:
                 start_y = (h - size) // 2
                 start_x = (w - size) // 2
                 img = img[start_y:start_y+size, start_x:start_x+size]
+                
+                
+            if config.doUpscale:
+                import utils.image_utils as image_utils
+                img = image_utils.upscale_image_cv2(img, output_path, config.pixelart, config.isEsganUpscale, config.gpuid,model_id=4)
 
             # Resize and crop to fit (if applicable)
             if config.doBucketing:
