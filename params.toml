@@ -5,15 +5,14 @@ batch_size = 1
 [image_processing]
 do_center_square_crop = false
 padding = "random(80, 100)"
-isEsganUpscale = true
-usePilSave = false
+useEsrganModel = true
 doBucketing = true
 pixelart = false
 doUpscale = true
 gpuid = 0
 
 [caption_processing]
-add_tags = false
+add_tags = true
 shuffle_content = false
 append_filename_to_captions = true
 rename = true

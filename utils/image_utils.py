@@ -77,20 +77,21 @@ def resize_and_crop_to_fit(image,target_resolutions):
 
 def random_light_color():
     lower = 250
-    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    return (random.randint(lower, 255), random.randint(lower, 255), random.randint(lower, 255))
 
-def fill_transparent_with_color_cv2(img):
+def fill_transparent_with_color_cv2(img, padding=0):
     """
-    Fill transparent areas of an image with a random light color using OpenCV.
+    Fill transparent areas of an image with a random light color using OpenCV and add padding.
     
     :param img: OpenCV image (numpy array) with alpha channel
-    :return: Image with transparent areas filled
+    :param padding: Amount of padding to add around the image (default: 0)
+    :return: Image with transparent areas filled and padding added
     """
     if img.shape[2] == 4:
         # Check if alpha channel is valid
         if np.all(img[:,:,3] == 0):
             # If alpha is all zero, treat as RGB
-            return img[:,:,:3]
+            img = img[:,:,:3]
         else:
             # Fill transparent with random light color
             alpha = img[:,:,3]
@@ -98,7 +99,14 @@ def fill_transparent_with_color_cv2(img):
             background_color = random_light_color()
             background = np.full_like(rgb, background_color)
             mask = alpha[:,:,np.newaxis] / 255.0
-            return (rgb * mask + background * (1 - mask)).astype(np.uint8)
+            img = (rgb * mask + background * (1 - mask)).astype(np.uint8)
+    
+    if padding > 0:
+        # Add padding
+        h, w = img.shape[:2]
+        padded_img = np.full((h + 2*padding, w + 2*padding, 3), random_light_color(), dtype=np.uint8)
+        padded_img[padding:padding+h, padding:padding+w] = img
+        return padded_img
     else:
         return img
     
@@ -162,21 +170,26 @@ def svg_scaling(image_path,max_side_length,output_path,do_center_square_crop,fli
     os.remove(image_path)
     return resized_img
 
-def upscale_image_cv2(img, output_path, pixelart=False, isEsganUpscale=False, gpuid=0,model_id=4):
+def upscale_image_cv2(img, output_path, pixelart=False, useEsrganModel=False, gpuid=0, model_id=4):
     """
     Upscale an image based on given parameters and save it.
     
     :param img: OpenCV image (numpy array)
     :param output_path: Path to save the upscaled image
     :param pixelart: Boolean, if True, use nearest neighbor upscaling
-    :param isEsganUpscale: Boolean, if True, use Realesrgan upscaling
+    :param useEsrganModel: Boolean, if True, use Realesrgan upscaling
     :param gpuid: Integer, GPU ID to use for Realesrgan
     :return: Upscaled OpenCV image (numpy array)
     """
+    min_dimension = min(img.shape[0], img.shape[1])
+    
+    if min_dimension > 1024:
+        return upscale_to_1024(img)
+    
     if pixelart:
         upscaled_img = cv2.resize(img, (img.shape[1] * 2, img.shape[0] * 2), interpolation=cv2.INTER_NEAREST)
-    elif isEsganUpscale:
-        realesrgan = Realesrgan(model=model_id,gpuid=gpuid)
+    elif useEsrganModel:
+        realesrgan = Realesrgan(model=model_id, gpuid=gpuid)
         upscaled_img = realesrgan.process_cv2(img)
     else:
         upscaled_img = img

@@ -94,7 +94,7 @@ class ProcessImageAPI:
 
             # Handle RGBA images
             if img.shape[2] == 4:
-                img = image_utils.fill_transparent_with_color_cv2(img)
+                img = image_utils.fill_transparent_with_color_cv2(img,config.padding)
 
             # Center square crop (if applicable)
             if config.do_center_square_crop:
@@ -106,7 +106,7 @@ class ProcessImageAPI:
                 
             if config.doUpscale:
                 import utils.image_utils as image_utils
-                img = image_utils.upscale_image_cv2(img, output_path, config.pixelart, config.isEsganUpscale, config.gpuid,model_id=3)
+                img = image_utils.upscale_image_cv2(img, output_path, config.pixelart, config.useEsrganModel, config.gpuid,model_id=3)
             
             # Resize and crop to fit (if applicable)
             if config.doBucketing:
