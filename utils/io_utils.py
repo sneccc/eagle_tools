@@ -1,17 +1,17 @@
-import os,time,json,zipfile
+import utils.folder_utils as folder_utils
+import utils.config as config
+import json
+import os
+import zipfile
 from multiprocessing import Manager
-from folder_utils import make_folders_recursively
+import time
 
-def ensure_directory_exists(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-def extract_EaglePack_and_process(eaglepacks_path,augment_list):
+def extract_EaglePack_and_process(eaglepacks_path):
     processed_dir = os.path.join(eaglepacks_path, "processed")
     basefolder = os.path.join(eaglepacks_path, "base")
     
     #Unzip all the eaglepacks
-    ensure_directory_exists(processed_dir)
+    folder_utils.ensure_directory_exists(processed_dir)
     for filename in os.listdir(eaglepacks_path):
         if filename.endswith(".eaglepack") and zipfile.is_zipfile(os.path.join(eaglepacks_path, filename)):
             with zipfile.ZipFile(os.path.join(eaglepacks_path, filename), 'r') as zipObj:
@@ -25,20 +25,20 @@ def extract_EaglePack_and_process(eaglepacks_path,augment_list):
         images = data["images"]
         folders = data["folder"]
         
-        ensure_directory_exists(basefolder)
+        folder_utils.ensure_directory_exists(basefolder)
         with Manager() as manager:
             counter = manager.Value('i', 0)  # Shared counter for parallel processes
             lock = manager.Lock()  # Lock to prevent race conditions
 
-            for augment in augment_list:
+            for augment in config.augment_list:
                 start_time = time.time()  # Start timer
                 if augment is None:
                     # No augmentation
-                    make_folders_recursively(processed_dir, folders, images, basefolder, processed_dir, counter, lock)
+                    folder_utils.make_folders_recursively(processed_dir, folders, images, basefolder, processed_dir, counter, lock)
                 else:
                     aug_type, aug_value, aug_percentage = augment
                     # With augmentation
-                    make_folders_recursively(
+                    folder_utils.make_folders_recursively(
                         processed_dir, folders, images, basefolder, processed_dir, counter, lock,
                         augment=(aug_type, aug_value, aug_percentage)
                     )           

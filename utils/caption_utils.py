@@ -1,8 +1,6 @@
 import random
 import re
 import os
-from config import use_LLM,llm_processor,add_tags,shuffle_content
-from io_utils import ensure_directory_exists
 
 def prepare_content(annotation, tags, add_tags=True, shuffle_content=False, augment=None):
     content_list = []
@@ -23,6 +21,7 @@ def apply_augmentation(content_list, augment):
         return content_list
 
     aug_name, aug_value, aug_percentage = augment
+    aug_percentage = float(aug_percentage)  # Ensure aug_percentage is a float
     if random.random() >= aug_percentage:
         return content_list
 
@@ -60,18 +59,19 @@ def write_tags_file(output_path, content_list):
         f.write(content)
 
 def create_tags_file(annotation, tags, folder_path, output_path, augment=None):
+    import config,folder_utils
+
     output_extension = '.txt'
     tags_file_name = f"{output_path}{output_extension}"
     tags_file_path = os.path.join(folder_path, tags_file_name)
-    
-    ensure_directory_exists(os.path.dirname(tags_file_path))
+    folder_utils.ensure_directory_exists(os.path.dirname(tags_file_path))
 
     if os.path.exists(tags_file_path):
         return
     
-    if use_LLM:
-        llm_processor.add_to_queue(folder_path, output_path, annotation, tags, augment)
+    if config.use_LLM:
+        config.llm_processor.add_to_queue(folder_path, output_path, annotation, tags, augment)
     else:
-        content = prepare_content(annotation, tags, add_tags, shuffle_content, augment=augment)
+        content = prepare_content(annotation, tags, config.add_tags, config.shuffle_content, augment=augment)
         content = remove_duplicate_phrases(content)
         write_tags_file(output_path=tags_file_path, content_list=[content])

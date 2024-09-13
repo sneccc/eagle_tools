@@ -1,11 +1,12 @@
+import os
 import asyncio
 from asyncio import Queue
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-import os
-from .caption_utils import prepare_content, write_tags_file
 from tqdm.asyncio import tqdm
 import logging
+
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -64,9 +65,10 @@ class AsyncLLMProcessor:
         self.progress_bar.close()
 
     async def process_batch(self, batch):
+        import caption_utils
         # Prepare captions
         captions = [
-            prepare_content(
+            caption_utils.prepare_content(
                 item['annotation'], 
                 item['tags'], 
                 self.add_tags, 
@@ -84,7 +86,7 @@ class AsyncLLMProcessor:
         for item, result in zip(batch, results):
             tags_file_path = os.path.join(item['folder_path'], f"{item['output_path']}.txt")
             os.makedirs(os.path.dirname(tags_file_path), exist_ok=True)
-            tasks.append(self.loop.run_in_executor(None, write_tags_file, tags_file_path, [result]))
+            tasks.append(self.loop.run_in_executor(None, caption_utils.write_tags_file, tags_file_path, [result]))
         
         await asyncio.gather(*tasks)
 

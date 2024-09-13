@@ -1,12 +1,9 @@
 import os
 from PIL import Image, ImageFile
 from concurrent.futures import ThreadPoolExecutor
-from .caption_utils import write_tags_file, prepare_content, remove_duplicate_phrases
-from .image_utils import resize_and_crop_to_fit, fill_transparent_with_color, center_crop_square, svg_scaling
-from .io_utils import ensure_directory_exists
 import cv2
 import numpy as np
-from .image_utils import resize_and_crop_to_fit_cv2
+
 
 Image.MAX_IMAGE_PIXELS = None
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -15,16 +12,23 @@ class ProcessImageAPI:
     def __init__(self, config):
         self.config = config
         self.llm_processor = None
+        self.rename = config.get('rename', True)
         if config.get('use_LLM', False):
             from .LLM_API import AsyncLLMProcessor
             self.llm_processor = AsyncLLMProcessor(
                 add_tags=config.get('add_tags', False),
                 shuffle_content=config.get('shuffle_content', False)
             )
-
+    
+    def process_image_batch(self, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None):
+        self.process_images(images_batch, folder_path, basefolder, image_paths_batch, counter, lock, rename=self.rename, augment=augment)
+        
     def create_tags_file(self, annotation, tags, folder_path, output_path, augment=None):
+        import utils.caption_utils as caption_utils
+        import utils.folder_utils as folder_utils
+
         tags_file_path = os.path.join(folder_path, f"{output_path}.txt")
-        ensure_directory_exists(os.path.dirname(tags_file_path))
+        folder_utils.ensure_directory_exists(os.path.dirname(tags_file_path))
 
         if os.path.exists(tags_file_path):
             return
@@ -32,10 +36,10 @@ class ProcessImageAPI:
         if self.llm_processor:
             self.llm_processor.add_to_queue(folder_path, output_path, annotation, tags, augment)
         else:
-            content = prepare_content(annotation, tags, self.config.get('add_tags', False),
+            content = caption_utils.prepare_content(annotation, tags, self.config.get('add_tags', False),
                                       self.config.get('shuffle_content', False), augment=augment)
-            content = remove_duplicate_phrases(content)
-            write_tags_file(output_path=tags_file_path, content_list=[content])
+            content = caption_utils.remove_duplicate_phrases(content)
+            caption_utils.write_tags_file(output_path=tags_file_path, content_list=[content])
 
     def process_image(self, image, folder_path, basefolder, image_path, count, rename=True, augment=None):
         try:
@@ -56,7 +60,8 @@ class ProcessImageAPI:
 
     def _process_svg(self, image_path, output_path):
         try:
-            img = svg_scaling(image_path, 1024, output_path, self.config.get('do_center_square_crop', False), 0.0)
+            import image_utils
+            img = image_utils.svg_scaling(image_path, 1024, output_path, self.config.get('do_center_square_crop', False), 0.0)
             img.save(f"{os.path.splitext(output_path)[0]}.png", format='PNG', quality=98)
         except Exception as e:
             print(f"Error resizing SVG image: {e}")
@@ -110,7 +115,8 @@ class ProcessImageAPI:
             if self.config.get('doBucketing', True):
                 target_resolutions = self.config.get('target_resolutions', [])
                 if target_resolutions:
-                    img = resize_and_crop_to_fit_cv2(img, target_resolutions)
+                    import utils.image_utils as image_utils
+                    img = image_utils.resize_and_crop_to_fit_cv2(img, target_resolutions)
 
             # Final check on image dimensions
             h, w = img.shape[:2]
@@ -121,7 +127,12 @@ class ProcessImageAPI:
             cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
         except Exception as e:
-            print(f"Error processing image {image_path}: {e}")
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Error processing image {image_path}:")
+            print(f"Exception: {e}")
+            print("Traceback:")
+            print(error_trace)
             # Optionally, you could log this error or handle it in some other way
 
     def process_images(self, images, folder_path, basefolder, image_paths, counter, lock, rename=True, augment=None):
@@ -139,3 +150,4 @@ class ProcessImageAPI:
     def close(self):
         if self.llm_processor:
             self.llm_processor.stop()
+

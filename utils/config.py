@@ -1,10 +1,21 @@
-import toml
 import random
-from LLM_API import AsyncLLMProcessor
+import toml
+
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        config = toml.load(f)
+    
+    # Convert augment probabilities to float
+    if 'augment' in config and 'list' in config['augment']:
+        for i, aug in enumerate(config['augment']['list']):
+            if isinstance(aug, dict) and 'probability' in aug:
+                aug['probability'] = float(aug['probability'])
+                config['augment']['list'][i] = (aug['type'], aug['value'], aug['probability'])
+    
+    return config
 
 # Load configuration
-with open('params.toml', 'r') as f:
-    config = toml.load(f)
+config = load_config('params.toml')
 
 # Parallel processing settings
 number_of_jobs = config['parallel_processing']['number_of_jobs']
@@ -30,8 +41,15 @@ input_path = config['paths']['input_path']
 
 # LLM settings
 if config['llm']['use_LLM']:
-    llm_processor = AsyncLLMProcessor(**config['llm'])
+    import LLM_API
+    print("Using LLM")
+    use_LLM = True
+    llm_processor = LLM_API.AsyncLLMProcessor(**config['llm'])
     number_of_jobs = 1
+else:
+    print("Not using LLM")
+    use_LLM = False
+    llm_processor = None
 
 # Augmentation settings
 augment_list = config['augment']['list']
