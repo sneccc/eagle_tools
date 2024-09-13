@@ -1,24 +1,24 @@
-[general]
-pixelart = false
-append_filename_to_captions = true
-doBucketing = true
-isEsganUpscale = false
-usePilSave = false
+[parallel_processing]
 number_of_jobs = 16
+
+[image_processing]
 do_center_square_crop = false
 padding = "random(80, 100)"
+isEsganUpscale = false
+usePilSave = false
+doBucketing = true
+pixelart = false
+
+[caption_processing]
 add_tags = false
 shuffle_content = false
-use_LLM = false
-
+append_filename_to_captions = true
 
 [paths]
 input_path = "P:\\datasets\\wallhaven"
 
-
 [llm]
-add_tags = true
-shuffle_content = false
+use_LLM = false
 
 [augment]
 list = [
