@@ -32,15 +32,17 @@ def extract_EaglePack_and_process(eaglepacks_path):
 
             for augment in config.augment_list:
                 start_time = time.time()  # Start timer
-                if augment is None:
+                if augment is None or (isinstance(augment, dict) and augment.get('type') == "normal"):
                     # No augmentation
                     folder_utils.make_folders_recursively(processed_dir, folders, images, basefolder, processed_dir, counter, lock)
                 else:
-                    aug_type, aug_value, aug_percentage = augment
+                    aug_type = augment['type'] if isinstance(augment, dict) else augment[0]
+                    aug_value = augment['value'] if isinstance(augment, dict) else augment[1]
+                    aug_probability = augment['probability'] if isinstance(augment, dict) else augment[2]
                     # With augmentation
                     folder_utils.make_folders_recursively(
                         processed_dir, folders, images, basefolder, processed_dir, counter, lock,
-                        augment=(aug_type, aug_value, aug_percentage)
+                        augment=(aug_type, aug_value, aug_probability)
                     )           
                 end_time = time.time()  # End timer
                 print(f"Time taken for augmentation {augment}: {end_time - start_time:.2f} seconds")

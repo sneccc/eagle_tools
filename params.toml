@@ -15,7 +15,7 @@ gpuid = 0
 add_tags = true
 shuffle_content = false
 append_filename_to_captions = true
-rename = true
+rename_output_file = true
 
 [paths]
 input_path = "P:\\datasets\\hand drawn icons"
@@ -25,8 +25,10 @@ use_LLM = false
 
 [augment]
 list = [
-    { type = "prepend", value = "ohwx artstyle, ", probability = 1.0 }
+    {type = "normal", value = "", probability = 1.0},
+    {type = "prepend", value = "ohwx artstyle, ", probability = 1.0}
 ]
+#{ type = "prepend", value = "ohwx artstyle, ", probability = 1.0 }
 
 [resolutions]
 target_resolutions = [

@@ -13,7 +13,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 class ProcessImageAPI:
     def __init__(self):
         self.llm_processor = None
-        self.rename = config.rename
+        self.rename_output_file = config.rename_output_file
         if config.use_LLM:
             from .LLM_API import AsyncLLMProcessor
             self.llm_processor = AsyncLLMProcessor(
@@ -22,7 +22,7 @@ class ProcessImageAPI:
             )
     
     def process_image_batch(self, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None):
-        self.process_images(images_batch, folder_path, basefolder, image_paths_batch, counter, lock, rename=self.rename, augment=augment)
+        self.process_images(images_batch, folder_path, basefolder, image_paths_batch, counter, lock, rename_output_file=self.rename_output_file, augment=augment)
         
     def create_tags_file(self, annotation, tags, folder_path, output_path, augment=None):
         import utils.caption_utils as caption_utils
@@ -42,13 +42,13 @@ class ProcessImageAPI:
             content = caption_utils.remove_duplicate_phrases(content)
             caption_utils.write_tags_file(output_path=tags_file_path, content_list=[content])
 
-    def process_image(self, image, folder_path, basefolder, image_path, count, rename=True, augment=None):
+    def process_image(self, image, folder_path, basefolder, image_path, count, rename_output_file=True, augment=None):
         try:
             if not os.path.exists(image_path):
                 print(f"Image not found: {image_path}")
                 return
 
-            output_path = os.path.join(basefolder, f"img_{count:03d}" if rename else image['name'])
+            output_path = os.path.join(basefolder, f"img_{count:03d}" if rename_output_file else image['name'])
             self.create_tags_file(image.get("annotation"), image.get("tags"), folder_path, output_path, augment)
 
             if image['ext'] == "svg":
@@ -134,14 +134,14 @@ class ProcessImageAPI:
             print(error_trace)
             # Optionally, you could log this error or handle it in some other way
 
-    def process_images(self, images, folder_path, basefolder, image_paths, counter, lock, rename=True, augment=None):
+    def process_images(self, images, folder_path, basefolder, image_paths, counter, lock, rename_output_file=True, augment=None):
         with ThreadPoolExecutor() as executor:
             futures = []
             for image, image_path in zip(images, image_paths):
                 with lock:
                     count = counter.value
                     counter.value += 1
-                futures.append(executor.submit(self.process_image, image, folder_path, basefolder, image_path, count, rename, augment))
+                futures.append(executor.submit(self.process_image, image, folder_path, basefolder, image_path, count, rename_output_file, augment))
             
             for future in futures:
                 future.result()  # This will raise any exceptions that occurred during processing
