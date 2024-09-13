@@ -32,7 +32,7 @@ def extract_EaglePack_and_process(eaglepacks_path):
 
             for augment in config.augment_list:
                 start_time = time.time()  # Start timer
-                if augment is None or (isinstance(augment, dict) and augment.get('type') == "normal"):
+                if augment is None or (isinstance(augment, dict) and augment.get('type') == "skip_augmentation"):
                     # No augmentation
                     folder_utils.make_folders_recursively(processed_dir, folders, images, basefolder, processed_dir, counter, lock)
                 else:

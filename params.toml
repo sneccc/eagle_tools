@@ -1,6 +1,6 @@
 [parallel_processing]
-number_of_jobs = 1
-batch_size = 1
+number_of_jobs = 12
+batch_size = 8
 
 [image_processing]
 do_center_square_crop = false
@@ -25,7 +25,7 @@ use_LLM = false
 
 [augment]
 list = [
-    {type = "normal", value = "", probability = 1.0},
+    {type = "skip_augmentation"},
     {type = "prepend", value = "ohwx artstyle, ", probability = 1.0}
 ]
 #{ type = "prepend", value = "ohwx artstyle, ", probability = 1.0 }
