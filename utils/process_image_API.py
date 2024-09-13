@@ -106,15 +106,17 @@ class ProcessImageAPI:
                 
             if config.doUpscale:
                 import utils.image_utils as image_utils
-                img = image_utils.upscale_image_cv2(img, output_path, config.pixelart, config.isEsganUpscale, config.gpuid,model_id=4)
-
+                img = image_utils.upscale_image_cv2(img, output_path, config.pixelart, config.isEsganUpscale, config.gpuid,model_id=3)
+            
             # Resize and crop to fit (if applicable)
             if config.doBucketing:
                 target_resolutions = config.target_resolutions
                 if target_resolutions:
                     import utils.image_utils as image_utils
                     img = image_utils.resize_and_crop_to_fit_cv2(img, target_resolutions)
-
+            else:
+                img = image_utils.upscale_to_1024(img)
+            
             # Final check on image dimensions
             h, w = img.shape[:2]
             if h < min_dimension or w < min_dimension:

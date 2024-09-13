@@ -178,13 +178,15 @@ def upscale_image_cv2(img, output_path, pixelart=False, isEsganUpscale=False, gp
     elif isEsganUpscale:
         realesrgan = Realesrgan(model=model_id,gpuid=gpuid)
         upscaled_img = realesrgan.process_cv2(img)
-        target_size = (
-            math.floor(img.shape[1] * 1024 / min(img.shape[1], img.shape[0])),
-            math.floor(img.shape[0] * 1024 / min(img.shape[1], img.shape[0]))
-        )
-        upscaled_img = cv2.resize(upscaled_img, target_size, interpolation=cv2.INTER_AREA)
     else:
         upscaled_img = img
+    return upscaled_img
 
-    cv2.imwrite(os.path.splitext(output_path)[0] + ".png", upscaled_img, [cv2.IMWRITE_PNG_COMPRESSION, 2])
+
+def upscale_to_1024(img):
+    target_size = (
+        math.floor(img.shape[1] * 1024 / min(img.shape[1], img.shape[0])),
+        math.floor(img.shape[0] * 1024 / min(img.shape[1], img.shape[0]))
+    )
+    upscaled_img = cv2.resize(img, target_size, interpolation=cv2.INTER_AREA)
     return upscaled_img

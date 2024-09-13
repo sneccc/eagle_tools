@@ -5,7 +5,7 @@ batch_size = 1
 [image_processing]
 do_center_square_crop = false
 padding = "random(80, 100)"
-isEsganUpscale = false
+isEsganUpscale = true
 usePilSave = false
 doBucketing = true
 pixelart = false
