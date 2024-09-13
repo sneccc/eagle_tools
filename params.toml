@@ -1,5 +1,6 @@
 [parallel_processing]
-number_of_jobs = 1
+number_of_jobs = 10
+batch_size = 10
 
 [image_processing]
 do_center_square_crop = false

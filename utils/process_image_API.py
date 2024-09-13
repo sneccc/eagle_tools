@@ -3,21 +3,21 @@ from PIL import Image, ImageFile
 from concurrent.futures import ThreadPoolExecutor
 import cv2
 import numpy as np
+import utils.config as config
 
 
 Image.MAX_IMAGE_PIXELS = None
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class ProcessImageAPI:
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
         self.llm_processor = None
-        self.rename = config.get('rename', True)
-        if config.get('use_LLM', False):
+        self.rename = config.rename
+        if config.use_LLM:
             from .LLM_API import AsyncLLMProcessor
             self.llm_processor = AsyncLLMProcessor(
-                add_tags=config.get('add_tags', False),
-                shuffle_content=config.get('shuffle_content', False)
+                add_tags=config.add_tags,
+                shuffle_content=config.shuffle_content
             )
     
     def process_image_batch(self, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None):
@@ -36,8 +36,8 @@ class ProcessImageAPI:
         if self.llm_processor:
             self.llm_processor.add_to_queue(folder_path, output_path, annotation, tags, augment)
         else:
-            content = caption_utils.prepare_content(annotation, tags, self.config.get('add_tags', False),
-                                      self.config.get('shuffle_content', False), augment=augment)
+            content = caption_utils.prepare_content(annotation, tags, config.add_tags,
+                                      config.shuffle_content, augment=augment)
             content = caption_utils.remove_duplicate_phrases(content)
             caption_utils.write_tags_file(output_path=tags_file_path, content_list=[content])
 
@@ -61,7 +61,7 @@ class ProcessImageAPI:
     def _process_svg(self, image_path, output_path):
         try:
             import image_utils
-            img = image_utils.svg_scaling(image_path, 1024, output_path, self.config.get('do_center_square_crop', False), 0.0)
+            img = image_utils.svg_scaling(image_path, 1024, output_path, config.do_center_square_crop, 0.0)
             img.save(f"{os.path.splitext(output_path)[0]}.png", format='PNG', quality=98)
         except Exception as e:
             print(f"Error resizing SVG image: {e}")
@@ -100,20 +100,20 @@ class ProcessImageAPI:
                     # Fill transparent with color
                     alpha = img[:,:,3]
                     rgb = img[:,:,:3]
-                    background = np.full_like(rgb, self.config.get('padding', 90))
+                    background = np.full_like(rgb, config.padding)
                     mask = alpha[:,:,np.newaxis] / 255.0
                     img = (rgb * mask + background * (1 - mask)).astype(np.uint8)
 
             # Center square crop (if applicable)
-            if self.config.get('do_center_square_crop', False):
+            if config.do_center_square_crop:
                 size = min(h, w)
                 start_y = (h - size) // 2
                 start_x = (w - size) // 2
                 img = img[start_y:start_y+size, start_x:start_x+size]
 
             # Resize and crop to fit (if applicable)
-            if self.config.get('doBucketing', True):
-                target_resolutions = self.config.get('target_resolutions', [])
+            if config.doBucketing:
+                target_resolutions = config.target_resolutions
                 if target_resolutions:
                     import utils.image_utils as image_utils
                     img = image_utils.resize_and_crop_to_fit_cv2(img, target_resolutions)

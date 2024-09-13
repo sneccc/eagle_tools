@@ -19,6 +19,7 @@ config = load_config('params.toml')
 
 # Parallel processing settings
 number_of_jobs = config['parallel_processing']['number_of_jobs']
+batch_size = config['parallel_processing']['batch_size']
 
 # Image processing settings
 globals().update(config['image_processing'])
