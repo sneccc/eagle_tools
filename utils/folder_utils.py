@@ -1,12 +1,16 @@
 import os
-from joblib import Parallel, delayed
-from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm  # Use the CLI version of tqdm
 import utils.config as config
 import utils.process_image_API as process_image_API
+import logging
+
+logger = logging.getLogger(__name__)
 
 def ensure_directory_exists(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
+
 def make_folders_recursively(root, folder, images, basefolder, processed_dir, counter, lock, augment=None):
     safe_folder_name = folder["name"].replace("/", "_")
     current_path = os.path.join(root, safe_folder_name)
@@ -14,26 +18,41 @@ def make_folders_recursively(root, folder, images, basefolder, processed_dir, co
 
     images_in_folder = [image for image in images if folder["id"] in image["folders"]]
 
-    batch_size = config.batch_size  # Adjust batch size as needed
-    image_processing_tasks = []
+    cpu_batch_size = config.cpu_batch_size
     api_instance = process_image_API.ProcessImageAPI()
 
-    for i in range(0, len(images_in_folder), batch_size):
-        images_batch = images_in_folder[i:i + batch_size]
-        image_paths_batch = [
-            os.path.join(processed_dir, f"{image['id']}.info", f"{image['name']}.{image['ext']}") for image in images_batch
-        ]
+    # Create a global progress bar with dynamic columns
+    with tqdm(total=len(images_in_folder), desc="Total Images Processed", position=0, dynamic_ncols=True) as global_pbar:
+        with ThreadPoolExecutor(max_workers=config.number_of_jobs) as executor:
+            futures = []
+            for i in range(0, len(images_in_folder), cpu_batch_size):
+                images_batch = images_in_folder[i:i + cpu_batch_size]
+                image_paths_batch = [
+                    os.path.join(processed_dir, f"{image['id']}.info", f"{image['name']}.{image['ext']}") for image in images_batch
+                ]
+                futures.append(
+                    executor.submit(
+                        api_instance.process_image_batch,
+                        images_batch,
+                        current_path,
+                        basefolder,
+                        image_paths_batch,
+                        counter,
+                        lock,
+                        augment=augment,
+                        global_pbar=global_pbar
+                    )
+                )
 
-        image_processing_tasks.append(
-            delayed(api_instance.process_image_batch)(images_batch, current_path, basefolder, image_paths_batch, counter, lock, augment)
-        )
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    logger.error(f"Error processing image batch: {e}")
 
-    if image_processing_tasks:
-        Parallel(n_jobs=config.number_of_jobs)(
-            tqdm(image_processing_tasks, desc="Processing image batches")
-        )
-
+    # Process child folders recursively
     for child in folder.get("children", []):
         make_folders_recursively(current_path, child, images, basefolder, processed_dir, counter, lock, augment=augment)
 
-    api_instance.close()  # Ensure any resources are properly released
+    # Close the API instance to ensure all images are processed
+    api_instance.close()

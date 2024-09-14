@@ -19,7 +19,9 @@ config = load_config('params.toml')
 
 # Parallel processing settings
 number_of_jobs = config['parallel_processing']['number_of_jobs']
-batch_size = config['parallel_processing']['batch_size']
+cpu_batch_size = config['parallel_processing']['cpu_batch_size']
+gpu_batch_size = config['parallel_processing']['gpu_batch_size']
+max_queue_size = config['parallel_processing']['max_queue_size']
 
 # Image processing settings
 globals().update(config['image_processing'])

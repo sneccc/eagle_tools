@@ -1,6 +1,9 @@
 [parallel_processing]
 number_of_jobs = 12
-batch_size = 8
+cpu_batch_size = 1
+gpu_batch_size = 4
+max_queue_size = 2000  # Increased from 1000 to 2000
+
 
 [image_processing]
 do_center_square_crop = false
@@ -11,6 +14,7 @@ pixelart = false
 doUpscale = true
 gpuid = 0
 
+
 [caption_processing]
 add_tags = true
 shuffle_content = false
@@ -18,14 +22,14 @@ append_filename_to_captions = true
 rename_output_file = true
 
 [paths]
-input_path = "P:\\datasets\\hand drawn icons"
+input_path = "P:\\datasets\\stickers"
 
 [llm]
 use_LLM = false
 
 [augment]
 list = [
-    {type = "skip_augmentation"},
+#    {type = "skip_augmentation"},
     {type = "prepend", value = "ohwx artstyle, ", probability = 1.0}
 ]
 #{ type = "prepend", value = "ohwx artstyle, ", probability = 1.0 }

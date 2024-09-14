@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 torch.random.manual_seed(0)
 
 class AsyncLLMProcessor:
-    def __init__(self, batch_size=4, add_tags=True, shuffle_content=False, max_queue_size=1000):
+    def __init__(self, cpu_batch_size=4, add_tags=True, shuffle_content=False, max_queue_size=1000):
         self.queue = Queue(maxsize=max_queue_size)
-        self.batch_size = batch_size
+        self.cpu_batch_size = cpu_batch_size
         self.add_tags = add_tags
         self.shuffle_content = shuffle_content
         self.pipe = self.load_llm_model()
@@ -40,29 +40,28 @@ class AsyncLLMProcessor:
         logger.info("LLM model loaded successfully.")
         return pipe
 
-    async def process_queue(self):
-        total_items = self.queue.qsize()
-        self.progress_bar = tqdm(total=total_items, desc="Processing items", unit="item")
+    def process_queue(self):
         while not self.stop_signal or not self.queue.empty():
             batch = []
             try:
                 for _ in range(self.batch_size):
-                    item = await asyncio.wait_for(self.queue.get(), timeout=1.0)
-                    if item is None:
-                        self.stop_signal = True
-                        break
+                    item = self.queue.get_nowait()
                     batch.append(item)
-            except asyncio.TimeoutError:
+                    if self.queue.empty():
+                        break
+            except queue.Empty:
                 if not batch:
-                    continue  # No items fetched, continue the loop
+                    continue
 
-            if batch:
-                await self.process_batch(batch)
-                self.progress_bar.update(len(batch))
-                for _ in batch:
-                    self.queue.task_done()
+            futures = []
+            for img, output_path in batch:
+                future = self.executor.submit(self._process_single_image, img, output_path)
+                futures.append(future)
+            
+            for future in futures:
+                future.result()
 
-        self.progress_bar.close()
+        self.processing_task = None
 
     async def process_batch(self, batch):
         import caption_utils

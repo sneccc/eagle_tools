@@ -5,7 +5,6 @@ import io
 from PIL import Image
 import cv2
 import numpy as np
-from realesrgan_ncnn_py import Realesrgan
 
 def resize_and_crop_to_fit_cv2(img, target_resolutions):
     """
@@ -170,30 +169,6 @@ def svg_scaling(image_path,max_side_length,output_path,do_center_square_crop,fli
     os.remove(image_path)
     return resized_img
 
-def upscale_image_cv2(img, output_path, pixelart=False, useEsrganModel=False, gpuid=0, model_id=4):
-    """
-    Upscale an image based on given parameters and save it.
-    
-    :param img: OpenCV image (numpy array)
-    :param output_path: Path to save the upscaled image
-    :param pixelart: Boolean, if True, use nearest neighbor upscaling
-    :param useEsrganModel: Boolean, if True, use Realesrgan upscaling
-    :param gpuid: Integer, GPU ID to use for Realesrgan
-    :return: Upscaled OpenCV image (numpy array)
-    """
-    min_dimension = min(img.shape[0], img.shape[1])
-    
-    if min_dimension > 1024:
-        return upscale_to_1024(img)
-    
-    if pixelart:
-        upscaled_img = cv2.resize(img, (img.shape[1] * 2, img.shape[0] * 2), interpolation=cv2.INTER_NEAREST)
-    elif useEsrganModel:
-        realesrgan = Realesrgan(model=model_id, gpuid=gpuid)
-        upscaled_img = realesrgan.process_cv2(img)
-    else:
-        upscaled_img = img
-    return upscaled_img
 
 
 def upscale_to_1024(img):
