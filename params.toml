@@ -4,7 +4,6 @@ cpu_batch_size = 1
 gpu_batch_size = 4
 max_queue_size = 2000  # Increased from 1000 to 2000
 
-
 [image_processing]
 do_center_square_crop = false
 padding = "random(80, 100)"
@@ -14,7 +13,6 @@ pixelart = false
 doUpscale = true
 gpuid = 0
 
-
 [caption_processing]
 add_tags = true
 shuffle_content = false
@@ -23,6 +21,7 @@ rename_output_file = true
 
 [paths]
 input_path = "P:\\datasets\\stickers"
+spandrel_model_path = "C:\\Users\\Daniel\\CodingProjects\\eagle_tools\\models\\spadrel_model.pth"
 
 [llm]
 use_LLM = false
@@ -32,10 +31,13 @@ list = [
 #    {type = "skip_augmentation"},
     {type = "prepend", value = "ohwx artstyle, ", probability = 1.0}
 ]
-#{ type = "prepend", value = "ohwx artstyle, ", probability = 1.0 }
 
 [resolutions]
 target_resolutions = [
     [1152, 896], [896, 1152], [1216, 832], [832, 1216],
     [1344, 768], [768, 1344], [1536, 640], [640, 1536], [1024, 1024]
 ]
+
+#Notes
+#augments:
+#{ type = "prepend", value = "ohwx artstyle, ", probability = 1.0 }

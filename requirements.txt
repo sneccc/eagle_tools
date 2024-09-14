@@ -1,0 +1,9 @@
+torch
+transformers
+Pillow
+opencv-python
+numpy
+tqdm
+toml
+cairosvg
+spandrel

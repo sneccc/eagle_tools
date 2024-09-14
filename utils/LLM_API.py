@@ -6,8 +6,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from tqdm.asyncio import tqdm
 import logging
 
-
-
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,7 +47,7 @@ class AsyncLLMProcessor:
                     batch.append(item)
                     if self.queue.empty():
                         break
-            except queue.Empty:
+            except asyncio.QueueEmpty:
                 if not batch:
                     continue
 

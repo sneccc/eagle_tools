@@ -1,17 +1,19 @@
 import cv2
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
+import torch
 import asyncio
 from asyncio import Queue, QueueFull  # Import QueueFull
 import utils.image_utils as image_utils
 import utils.config as config
 import os
-from realesrgan_ncnn_py import Realesrgan
 import queue
 from tqdm import tqdm
 import logging
 import threading
-
+from spandrel import ImageModelDescriptor, ModelLoader
+MODEL_PATH = r"C:\Users\Daniel\CodingProjects\eagle_tools\models\spadrel_model.pth"
+import utils.config as config
 logger = logging.getLogger(__name__)
 
 class UpscaleAPI:
@@ -36,6 +38,16 @@ class UpscaleAPI:
         self.upscale_progress = tqdm(total=0, desc="Upscaling Images", position=1, dynamic_ncols=True)
         self.gpu_queue_pbar = tqdm(total=self.max_queue_size, desc="GPU Queue", position=2, leave=False, dynamic_ncols=True)
         self.progress_lock = threading.Lock()
+
+        #spandrel
+        self.model = self.load_model()
+        
+    def load_model(self):
+        model = ModelLoader().load_from_file(MODEL_PATH)
+        assert isinstance(model, ImageModelDescriptor)
+        model.cuda().eval()
+        
+        return model
 
     def queue_image(self, img, output_path):
         try:
@@ -87,9 +99,8 @@ class UpscaleAPI:
     def _process_single_image(self, img, output_path):
         try:
             upscaled_img = self.upscale_image_cv2(
-                img, output_path, pixelart=False,
+                img, self.model, pixelart=False,
                 useEsrganModel=self.use_esrgan,
-                gpuid=self.gpu_id, model_id=self.model_id
             )
             
             # Resize and crop to fit (if applicable)
@@ -110,15 +121,14 @@ class UpscaleAPI:
             return None
             
     @staticmethod
-    def upscale_image_cv2(img, output_path, pixelart=False, useEsrganModel=False, gpuid=0, model_id=4):
+    def upscale_image_cv2(img, _model, pixelart=False, useEsrganModel=False):
         """
         Upscale an image based on given parameters and save it.
         
         :param img: OpenCV image (numpy array)
-        :param output_path: Path to save the upscaled image
         :param pixelart: Boolean, if True, use nearest neighbor upscaling
         :param useEsrganModel: Boolean, if True, use Realesrgan upscaling
-        :param gpuid: Integer, GPU ID to use for Realesrgan
+        :param _model: spandrel model
         :return: Upscaled OpenCV image (numpy array)
         """
         min_dimension = min(img.shape[0], img.shape[1])
@@ -129,8 +139,8 @@ class UpscaleAPI:
         if pixelart:
             upscaled_img = cv2.resize(img, (img.shape[1] * 2, img.shape[0] * 2), interpolation=cv2.INTER_NEAREST)
         elif useEsrganModel:
-            realesrgan = Realesrgan(model=model_id, gpuid=gpuid)
-            upscaled_img = realesrgan.process_cv2(img)
+            with torch.no_grad():
+                upscaled_img = _model(img)
         else:
             upscaled_img = img
         return upscaled_img
