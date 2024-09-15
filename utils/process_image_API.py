@@ -9,7 +9,6 @@ import utils.upscale_API as upscale_API
 from tqdm import tqdm
 from threading import Lock
 import logging
-import asyncio
 import threading
 
 logger = logging.getLogger(__name__)
@@ -105,8 +104,8 @@ class ProcessImageAPI:
             else:
                 raise ValueError(f"Unexpected number of channels: {img.shape[2]}")
             
-            # Handle RGBA images
-            if img.shape[2] == 4:
+            # Handle RGBA images or transparent images or mode is L
+            if img.shape[2] == 4 or img.shape[2] == 3 or img.mode == "L":
                 img = image_utils.fill_transparent_with_color_cv2(img, config.padding)
 
             # Center square crop (if applicable)

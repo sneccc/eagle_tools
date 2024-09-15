@@ -1,8 +1,8 @@
 [parallel_processing]
 number_of_jobs = 12
 cpu_batch_size = 1
-gpu_batch_size = 4
-max_queue_size = 2000  # Increased from 1000 to 2000
+gpu_batch_size = 1
+max_queue_size = 10  # Increased from 1000 to 2000
 
 [image_processing]
 do_center_square_crop = false
@@ -21,7 +21,7 @@ rename_output_file = true
 
 [paths]
 input_path = "P:\\datasets\\stickers"
-spandrel_model_path = "C:\\Users\\Daniel\\CodingProjects\\eagle_tools\\models\\spadrel_model.pth"
+spandrel_model_path = "models\\2x_Loyaldk-SuperPony_500000_V2.0.pth"
 
 [llm]
 use_LLM = false

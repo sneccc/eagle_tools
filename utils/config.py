@@ -1,6 +1,6 @@
 import random
 import toml
-
+import os
 def load_config(config_path):
     with open(config_path, 'r') as f:
         config = toml.load(f)
@@ -15,7 +15,8 @@ def load_config(config_path):
     return config
 
 # Load configuration
-config = load_config('params.toml')
+config_path = os.path.join(os.path.dirname(__file__), '..', 'params.toml')
+config = load_config(config_path)
 
 # Parallel processing settings
 number_of_jobs = config['parallel_processing']['number_of_jobs']
@@ -41,6 +42,10 @@ globals().update(config['caption_processing'])
 
 # Input path
 input_path = config['paths']['input_path']
+
+# Spandrel settings
+full_spandrel_model_path = config['paths']['spandrel_model_path']
+spandrel_model_path = os.path.join(os.path.dirname(__file__), '..', full_spandrel_model_path)
 
 # LLM settings
 if config['llm']['use_LLM']:

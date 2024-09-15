@@ -7,3 +7,4 @@ tqdm
 toml
 cairosvg
 spandrel
+spandrel_extra_arches

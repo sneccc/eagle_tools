@@ -5,6 +5,8 @@ import io
 from PIL import Image
 import cv2
 import numpy as np
+from typing import Tuple
+
 
 def resize_and_crop_to_fit_cv2(img, target_resolutions):
     """
@@ -171,10 +173,18 @@ def svg_scaling(image_path,max_side_length,output_path,do_center_square_crop,fli
 
 
 
-def upscale_to_1024(img):
-    target_size = (
-        math.floor(img.shape[1] * 1024 / min(img.shape[1], img.shape[0])),
-        math.floor(img.shape[0] * 1024 / min(img.shape[1], img.shape[0]))
-    )
-    upscaled_img = cv2.resize(img, target_size, interpolation=cv2.INTER_AREA)
-    return upscaled_img
+def upscale_to_1024(img: np.ndarray) -> np.ndarray:
+    assert img.ndim == 4, "Expected a batch of images"
+    batch_size, height, width, channels = img.shape
+    target_sizes = [
+        (
+            math.floor(width * 1024 / min(width, height)),
+            math.floor(height * 1024 / min(width, height))
+        )
+        for _ in range(batch_size)
+    ]
+    upscaled_imgs = np.array([
+        cv2.resize(img[i], target_sizes[i], interpolation=cv2.INTER_AREA)
+        for i in range(batch_size)
+    ])
+    return upscaled_imgs
