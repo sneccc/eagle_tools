@@ -1,8 +1,8 @@
 [parallel_processing]
 number_of_jobs = 12
-cpu_batch_size = 1
-gpu_batch_size = 1
-max_queue_size = 10  # Increased from 1000 to 2000
+cpu_batch_size = 4
+gpu_batch_size = 4
+max_queue_size = 100  # Increased from 1000 to 2000
 
 [image_processing]
 do_center_square_crop = false

@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 # Add the parent directory to the sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..')))
 
 from spandrel import ModelLoader, ImageModelDescriptor
 from utils.config import spandrel_model_path
@@ -81,12 +81,14 @@ def save_image(tensor: torch.Tensor, output_path: str):
 
 if __name__ == "__main__":
     # List of image filenames to process
-    image_filenames = ["vector_white.png", "vector_black.png"]
+    input_dir = "..\\input\\"
+    image_filenames = ["vector_white.png","vector_black.png"]
+    image_filepaths = [input_dir + filename for filename in image_filenames]
     
     # Load all images and store their tensors in a list
     image_tensors = []
-    for filename in image_filenames:
-        tensor = open_image(filename)
+    for filepath in image_filepaths:
+        tensor = open_image(filepath)
         image_tensors.append(tensor)
     
     # Concatenate all tensors to form a batch
@@ -102,7 +104,7 @@ if __name__ == "__main__":
         # Define the output filename
         input_filename = image_filenames[i]
         base_name, ext = os.path.splitext(input_filename)
-        output_filename = f"{base_name}_upscaled.png"
+        output_filename = f"../output/{base_name}_upscaled.png"
         
         # Save the image
         save_image(output_tensor, output_filename)
