@@ -1,3 +1,7 @@
+import threading
+import queue
+import os
+import logging
 import cv2
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
@@ -16,7 +20,16 @@ MODEL_PATH = config.spandrel_model_path
 logger = logging.getLogger(__name__)
 
 class UpscaleAPI:
-    def __init__(self, batch_size=4, use_esrgan=True, gpu_id=0, model_id=3, max_queue_size=1000):
+    def __init__(self, batch_size, use_esrgan, gpu_id, model_id):
+        """
+        Initialize the UpscaleAPI with given parameters and start the processing thread.
+
+        Args:
+            batch_size (int): Number of images to process in a batch.
+            use_esrgan (bool): Flag to indicate use of ESRGAN model.
+            gpu_id (int): GPU identifier.
+            model_id (int): Model identifier.
+        """
         self.batch_size = batch_size
         self.use_esrgan = use_esrgan
         self.gpu_id = gpu_id
