@@ -1,4 +1,3 @@
-import utils.folder_utils as folder_utils
 import utils.config as config
 import json
 import os
@@ -7,10 +6,11 @@ from multiprocessing import Manager
 import time
 import asyncio
 import logging
+import utils.folder_utils as folder_utils
 
 logger = logging.getLogger(__name__)
 
-def extract_EaglePack_and_process(eaglepacks_path):
+async def extract_EaglePack_and_process(eaglepacks_path):
     processed_dir = os.path.join(eaglepacks_path, "processed")
     basefolder = os.path.join(eaglepacks_path, "base")
     
@@ -38,13 +38,15 @@ def extract_EaglePack_and_process(eaglepacks_path):
                 start_time = time.time()  # Start timer
                 if augment is None or (isinstance(augment, dict) and augment.get('type') == "skip_augmentation"):
                     # No augmentation
-                    folder_utils.make_folders_recursively(processed_dir, folders, images, basefolder, processed_dir, counter, lock, augment=augment)
+                    await folder_utils.make_folders_recursively(
+                        processed_dir, folders, images, basefolder, processed_dir, counter, lock, augment=augment
+                    )
                 else:
                     aug_type = augment['type'] if isinstance(augment, dict) else augment[0]
                     aug_value = augment['value'] if isinstance(augment, dict) else augment[1]
                     aug_probability = augment['probability'] if isinstance(augment, dict) else augment[2]
                     # With augmentation
-                    folder_utils.make_folders_recursively(
+                    await folder_utils.make_folders_recursively(
                         processed_dir, folders, images, basefolder, processed_dir, counter, lock,
                         augment=(aug_type, aug_value, aug_probability)
                     )           
