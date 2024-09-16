@@ -1,7 +1,7 @@
 [parallel_processing]
-number_of_jobs = 12
+number_of_jobs = 4
 cpu_batch_size = 4
-gpu_batch_size = 4
+gpu_batch_size = 2
 max_queue_size = 100  # Increased from 1000 to 2000
 
 [image_processing]
@@ -14,7 +14,7 @@ doUpscale = true
 gpuid = 0
 
 [caption_processing]
-add_tags = true
+add_tags = false
 shuffle_content = false
 append_filename_to_captions = true
 rename_output_file = true
