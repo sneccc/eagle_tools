@@ -71,7 +71,7 @@ class UpscaleAPI:
 
             for img, output_path in zip(upscaled_images, output_paths):
                 # Save the upscaled image
-                cv2.imwrite(f"{os.path.splitext(output_path)[0]}_upscaled.png", img)
+                cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", img)
                 logger.debug(f"Upscaled image saved: {output_path}")
         except Exception as e:
             logger.error(f"Error during batch upscaling: {e}")

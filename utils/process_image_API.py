@@ -151,7 +151,7 @@ class ProcessImageAPI:
             logger.error(f"Error in non-upscaled processing for image {output_path}: {e}")
             return None
     
-    def process_images(self, images, folder_path, basefolder, image_paths, counter, lock, rename_output_file=True, augment=None, global_pbar=None):
+    def process_images(self, images, folder_path, basefolder, image_paths, counter, lock, rename_output_file=True, augment=None, queue_pbar=None):
         with ThreadPoolExecutor(max_workers=config.number_of_jobs) as executor:
             futures = []
             for image, image_path in zip(images, image_paths):
@@ -168,7 +168,7 @@ class ProcessImageAPI:
                         count,
                         lock,
                         augment,
-                        global_pbar
+                        queue_pbar
                     )
                 )
         
