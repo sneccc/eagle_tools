@@ -35,8 +35,8 @@ class ProcessImageAPI:
         )
         self.progress_lock = threading.Lock()
     
-    def process_image_batch(self, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None, global_pbar=None):
-        self.process_images(images_batch, folder_path, basefolder, image_paths_batch, counter, lock, rename_output_file=self.rename_output_file, augment=augment, global_pbar=global_pbar)
+    def process_image_batch(self, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None, queue_pbar=None):
+        self.process_images(images_batch, folder_path, basefolder, image_paths_batch, counter, lock, rename_output_file=self.rename_output_file, augment=augment, queue_pbar=queue_pbar)
     
     def create_tags_file(self, annotation, tags, folder_path, output_path, augment=None):
         import utils.caption_utils as caption_utils

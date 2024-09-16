@@ -21,8 +21,8 @@ def make_folders_recursively(root, folder, images, basefolder, processed_dir, co
     cpu_batch_size = config.cpu_batch_size
     api_instance = process_image_API.ProcessImageAPI()
 
-    # Create a global progress bar with dynamic columns
-    with tqdm(total=len(images_in_folder), desc="Total Images Processed", position=0, dynamic_ncols=True) as global_pbar:
+    # Create a global progress bar for the queue
+    with tqdm(total=len(images_in_folder), desc="Images Queued", position=0, dynamic_ncols=True) as queue_pbar:
         with ThreadPoolExecutor(max_workers=config.number_of_jobs) as executor:
             futures = []
             for i in range(0, len(images_in_folder), cpu_batch_size):
@@ -40,7 +40,7 @@ def make_folders_recursively(root, folder, images, basefolder, processed_dir, co
                         counter,
                         lock,
                         augment=augment,
-                        global_pbar=global_pbar
+                        queue_pbar=queue_pbar
                     )
                 )
 

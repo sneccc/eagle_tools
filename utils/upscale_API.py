@@ -3,21 +3,15 @@ import queue
 import os
 import logging
 import cv2
+import torch
 import numpy as np
-
+from spandrel import ImageModelDescriptor, ModelLoader
+import utils.config as config
+MODEL_PATH = config.spandrel_model_path
 logger = logging.getLogger(__name__)
 
 class UpscaleAPI:
     def __init__(self, batch_size, use_esrgan, gpu_id, model_id):
-        """
-        Initialize the UpscaleAPI with given parameters and start the processing thread.
-
-        Args:
-            batch_size (int): Number of images to process in a batch.
-            use_esrgan (bool): Flag to indicate use of ESRGAN model.
-            gpu_id (int): GPU identifier.
-            model_id (int): Model identifier.
-        """
         self.batch_size = batch_size
         self.use_esrgan = use_esrgan
         self.gpu_id = gpu_id
@@ -27,22 +21,19 @@ class UpscaleAPI:
         self.thread = threading.Thread(target=self._process_queue, name="UpscaleAPIThread")
         self.thread.start()
         logger.info(f"UpscaleAPI initialized with batch_size={batch_size}, use_esrgan={use_esrgan}, gpu_id={gpu_id}, model_id={model_id}")
-
+        self.model = self.load_model()
+        
     def queue_image(self, img, output_path):
-        """
-        Add an image to the queue for upscaling.
-
-        Args:
-            img (numpy.ndarray): Image to be upscaled.
-            output_path (str): Path to save the upscaled image.
-        """
         self.queue.put((img, output_path))
         logger.debug(f"Image queued for upscaling: {output_path}")
-
+    
+    def load_model(self):
+        model = ModelLoader().load_from_file(MODEL_PATH)
+        assert isinstance(model, ImageModelDescriptor)
+        model.cuda().eval()
+        
+        return model
     def _process_queue(self):
-        """
-        Internal method to process images from the queue in batches.
-        """
         batch = []
         while not self.stop_event.is_set() or not self.queue.empty():
             try:
@@ -70,12 +61,6 @@ class UpscaleAPI:
         logger.info("UpscaleAPI processing thread has stopped.")
 
     def _process_batch(self, batch):
-        """
-        Process a batch of images.
-
-        Args:
-            batch (list): List of tuples containing images and their output paths.
-        """
         imgs = [item[0] for item in batch]
         output_paths = [item[1] for item in batch]
         logger.info(f"Processing batch of {len(batch)} images.")
@@ -92,29 +77,37 @@ class UpscaleAPI:
             logger.error(f"Error during batch upscaling: {e}")
 
     def _upscale_images(self, imgs):
-        """
-        Upscale a list of images.
-
-        Args:
-            imgs (list): List of numpy arrays representing images to upscale.
-
-        Returns:
-            list: List of upscaled images as numpy arrays.
-        """
-        # Implement the actual upscaling logic here using the specified model
         logger.debug(f"Upscaling {len(imgs)} images.")
-        # Placeholder for upscaling logic
-        upscaled_imgs = []
-        for img in imgs:
-            # Simulate upscaling (replace with actual upscaling code)
-            upscaled_img = cv2.resize(img, (img.shape[1]*2, img.shape[0]*2), interpolation=cv2.INTER_CUBIC)
-            upscaled_imgs.append(upscaled_img)
-        return upscaled_imgs
+        tensors = [self.cv2_to_tensor(img) for img in imgs]
+        batch_tensor = torch.cat(tensors, dim=0)  
+        with torch.no_grad():
+            output_batch = self.model(batch_tensor)
+            upscaled_images = [self.tensor_to_cv2(tensor.squeeze(0)) for tensor in output_batch]
+        return upscaled_images
 
     def stop(self):
-        """
-        Signal the processing thread to stop and wait for it to finish.
-        """
         self.stop_event.set()
         self.thread.join()
         logger.info("UpscaleAPI processing thread has been stopped.")
+        
+    @staticmethod
+    def cv2_to_tensor(img: np.ndarray) -> torch.Tensor:
+        assert img.ndim == 3, f"Expected img to have 3 dimensions, but got {img.ndim} in cv2_to_tensor"        
+        # Convert BGR to RGB
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # Normalize to [0, 1]
+        img_float = img_rgb.astype(np.float32) / 255.0
+        # Convert to tensor and add batch dimension, final shape is [1, 3, H, W]
+        return torch.from_numpy(img_float).permute(2, 0, 1).unsqueeze(0).cuda()
+
+    @staticmethod
+    def tensor_to_cv2(tensor: torch.Tensor) -> np.ndarray:
+        #input shape is [C, H, W]
+        assert tensor.dim() == 3, f"Expected tensor to have 3 dimensions, but got {tensor.dim()} in tensor_to_cv2"
+        assert tensor.shape[0] == 3, f"Expected tensor to have 3 channels, but got {tensor.shape[0]} in tensor_to_cv2"
+
+        img = tensor.mul(255).byte().cpu().numpy()  # Convert to [0, 255] and NumPy
+        img = img.transpose((1, 2, 0))  # Convert to [H, W, C]
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # Convert back to BGR for OpenCV
+        #final shape is [H, W, C]
+        return img
