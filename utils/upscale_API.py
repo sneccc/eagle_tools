@@ -6,6 +6,7 @@ import cv2
 import torch
 import numpy as np
 from spandrel import ImageModelDescriptor, ModelLoader
+import utils.color_utils as color_utils
 import utils.config as config
 MODEL_PATH = config.spandrel_model_path
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class UpscaleAPI:
         model.cuda().eval()
         
         return model
+
     def _process_queue(self):
         batch = []
         while not self.stop_event.is_set() or not self.queue.empty():
@@ -70,7 +72,11 @@ class UpscaleAPI:
             upscaled_images = self._upscale_images(imgs)
 
             for img, output_path in zip(upscaled_images, output_paths):
-                # Save the upscaled image
+                
+                
+                
+                # Save to RGB
+                img = color_utils.convert_color(img, to='RGB')
                 cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", img)
                 logger.debug(f"Upscaled image saved: {output_path}")
         except Exception as e:
@@ -78,36 +84,20 @@ class UpscaleAPI:
 
     def _upscale_images(self, imgs):
         logger.debug(f"Upscaling {len(imgs)} images.")
-        tensors = [self.cv2_to_tensor(img) for img in imgs]
+        tensors = [color_utils.cv2_to_tensor(img) for img in imgs]
         batch_tensor = torch.cat(tensors, dim=0)  
         with torch.no_grad():
             output_batch = self.model(batch_tensor)
-            upscaled_images = [self.tensor_to_cv2(tensor.squeeze(0)) for tensor in output_batch]
+            upscaled_images = [color_utils.tensor_to_cv2(tensor.squeeze(0)) for tensor in output_batch]
         return upscaled_images
 
     def stop(self):
         self.stop_event.set()
         self.thread.join()
         logger.info("UpscaleAPI processing thread has been stopped.")
-        
-    @staticmethod
-    def cv2_to_tensor(img: np.ndarray) -> torch.Tensor:
-        assert img.ndim == 3, f"Expected img to have 3 dimensions, but got {img.ndim} in cv2_to_tensor"        
-        # Convert BGR to RGB
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # Normalize to [0, 1]
-        img_float = img_rgb.astype(np.float32) / 255.0
-        # Convert to tensor and add batch dimension, final shape is [1, 3, H, W]
-        return torch.from_numpy(img_float).permute(2, 0, 1).unsqueeze(0).cuda()
 
-    @staticmethod
-    def tensor_to_cv2(tensor: torch.Tensor) -> np.ndarray:
-        #input shape is [C, H, W]
-        assert tensor.dim() == 3, f"Expected tensor to have 3 dimensions, but got {tensor.dim()} in tensor_to_cv2"
-        assert tensor.shape[0] == 3, f"Expected tensor to have 3 channels, but got {tensor.shape[0]} in tensor_to_cv2"
+    def cv2_to_tensor(self, img: np.ndarray) -> torch.Tensor:
+        return color_utils.cv2_to_tensor(img)
 
-        img = tensor.mul(255).byte().cpu().numpy()  # Convert to [0, 255] and NumPy
-        img = img.transpose((1, 2, 0))  # Convert to [H, W, C]
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # Convert back to BGR for OpenCV
-        #final shape is [H, W, C]
-        return img
+    def tensor_to_cv2(self, tensor: torch.Tensor) -> np.ndarray:
+        return color_utils.tensor_to_cv2(tensor)

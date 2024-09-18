@@ -145,7 +145,7 @@ class ProcessImageAPI:
             if h < min_dimension or w < min_dimension:
                 raise ValueError(f"Resulting image dimensions too small: {w}x{h}")
 
-            cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", img)
             return img
         except Exception as e:
             logger.error(f"Error in non-upscaled processing for image {output_path}: {e}")
