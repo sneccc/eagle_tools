@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm  # Use the CLI version of tqdm
 import utils.config as config
 import utils.process_image_API as process_image_API
+import utils.io_utils as io_utils  # Import the normalize_and_rename_files function
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ def make_folders_recursively(root, folder, images, basefolder, processed_dir, co
 
     cpu_batch_size = config.cpu_batch_size
     api_instance = process_image_API.ProcessImageAPI()
+
 
     # Create a global progress bar for the queue
     with tqdm(total=len(images_in_folder), desc="Images Queued", position=0, dynamic_ncols=True) as queue_pbar:

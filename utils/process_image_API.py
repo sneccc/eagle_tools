@@ -11,6 +11,7 @@ from tqdm import tqdm
 from threading import Lock
 import logging
 import threading
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,27 @@ class ProcessImageAPI:
             model_id=3
         )
         self.progress_lock = threading.Lock()
+        
+    def normalize_and_rename_paths(self, image_paths_batch, folder_path):
+        sanitized_paths = []
+        for image_path in image_paths_batch:
+            # Extract the filename and extension
+            base_name = os.path.basename(image_path)
+            # Normalize the filename by removing weird characters
+            sanitized_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', base_name)
+            # Create the new path
+            new_path = os.path.join(folder_path, sanitized_name)
+            # Check if the new path already exists
+            if not os.path.exists(new_path):
+                # Rename the file if the new path does not exist
+                os.rename(image_path, new_path)
+            sanitized_paths.append(new_path)
+        return sanitized_paths
     
     def process_image_batch(self, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None, queue_pbar=None):
-        self.process_images(images_batch, folder_path, basefolder, image_paths_batch, counter, lock, rename_output_file=self.rename_output_file, augment=augment, queue_pbar=queue_pbar)
+        # Normalize and rename paths
+        normalized_image_paths_batch = self.normalize_and_rename_paths(image_paths_batch, folder_path)
+        self.process_images(images_batch, folder_path, basefolder, normalized_image_paths_batch, counter, lock, rename_output_file=self.rename_output_file, augment=augment, queue_pbar=queue_pbar)
     
     def create_tags_file(self, annotation, tags, folder_path, output_path, augment=None):
         import utils.caption_utils as caption_utils
@@ -88,6 +107,8 @@ class ProcessImageAPI:
     
     def _process_raster(self, image_path, output_path):
         try:
+            #convert to true path
+            image_path = os.path.abspath(image_path)
             img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
             if img is None:
                 raise ValueError(f"Failed to load image: {image_path}")

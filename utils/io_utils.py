@@ -7,6 +7,8 @@ from multiprocessing import Manager
 import time
 import asyncio
 import logging
+import unicodedata
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +55,4 @@ def extract_EaglePack_and_process(eaglepacks_path):
 
     # No need to manually initialize UpscaleAPI here as it's handled within ProcessImageAPI
     # The ProcessImageAPI instance manages its own UpscaleAPI
+

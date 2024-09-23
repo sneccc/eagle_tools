@@ -20,7 +20,7 @@ append_filename_to_captions = true
 rename_output_file = true
 
 [paths]
-input_path = "P:\\datasets\\Interface Lineal Color Style"
+input_path = "P:\\datasets\\interface gradient outline"
 spandrel_model_path = "models\\2x_Loyaldk-SuperPony_500000_V2.0.pth"
 
 [llm]
