@@ -68,17 +68,27 @@ class UpscaleAPI:
         logger.info(f"Processing batch of {len(batch)} images.")
 
         try:
-            # Perform upscaling on the batch of images
-            upscaled_images = self._upscale_images(imgs)
+            # Group images by their dimensions
+            size_to_images = {}
+            for img, output_path in zip(imgs, output_paths):
+                size = img.shape[:2]
+                if size not in size_to_images:
+                    size_to_images[size] = []
+                size_to_images[size].append((img, output_path))
 
-            for img, output_path in zip(upscaled_images, output_paths):
-                
-                
-                
-                # Save to RGB
-                img = color_utils.convert_color(img, to='RGB')
-                cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", img)
-                logger.debug(f"Upscaled image saved: {output_path}")
+            # Process each group of images with the same dimensions
+            for size, batch in size_to_images.items():
+                batch_imgs = [item[0] for item in batch]
+                batch_output_paths = [item[1] for item in batch]
+
+                # Perform upscaling on the batch of images
+                upscaled_images = self._upscale_images(batch_imgs)
+
+                for img, output_path in zip(upscaled_images, batch_output_paths):
+                    # Save to RGB
+                    img = color_utils.convert_color(img, to='RGB')
+                    cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", img)
+                    logger.debug(f"Upscaled image saved: {output_path}")
         except Exception as e:
             logger.error(f"Error during batch upscaling: {e}")
 

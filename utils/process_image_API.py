@@ -107,8 +107,8 @@ class ProcessImageAPI:
             else:
                 raise ValueError(f"Unexpected number of channels: {img.shape[2]}")
             
-            # Handle RGBA images or transparent images or mode is L
-            if img.shape[2] == 4 or img.shape[2] == 3 or img.mode == "L":
+            # Handle transparent images
+            if img.shape[2] == 4 and np.any(img[:, :, 3] < 255):
                 img = image_utils.fill_transparent_with_color_cv2(img, config.padding)
 
             # Center square crop (if applicable)

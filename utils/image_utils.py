@@ -90,23 +90,23 @@ def fill_transparent_with_color_cv2(img, padding=0):
     """
     if img.shape[2] == 4:
         # Check if alpha channel is valid
-        if np.all(img[:,:,3] == 0):
+        if np.all(img[:, :, 3] == 0):
             # If alpha is all zero, treat as RGB
-            img = img[:,:,:3]
+            img = img[:, :, :3]
         else:
             # Fill transparent with random light color
-            alpha = img[:,:,3]
-            rgb = img[:,:,:3]
+            alpha = img[:, :, 3]
+            rgb = img[:, :, :3]
             background_color = random_light_color()
             background = np.full_like(rgb, background_color)
-            mask = alpha[:,:,np.newaxis] / 255.0
+            mask = alpha[:, :, np.newaxis] / 255.0
             img = (rgb * mask + background * (1 - mask)).astype(np.uint8)
     
     if padding > 0:
-        # Add padding
+        # Add padding with random light color
         h, w = img.shape[:2]
-        padded_img = np.full((h + 2*padding, w + 2*padding, 3), random_light_color(), dtype=np.uint8)
-        padded_img[padding:padding+h, padding:padding+w] = img
+        padded_img = np.full((h + 2 * padding, w + 2 * padding, 3), random_light_color(), dtype=np.uint8)
+        padded_img[padding:padding + h, padding:padding + w] = img
         return padded_img
     else:
         return img
