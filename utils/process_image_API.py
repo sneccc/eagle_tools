@@ -40,15 +40,19 @@ class ProcessImageAPI:
         sanitized_paths = []
         for image_path in image_paths_batch:
             # Extract the filename and extension
-            base_name = os.path.basename(image_path)
+            base_name, ext = os.path.splitext(os.path.basename(image_path))
             # Normalize the filename by removing weird characters
             sanitized_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', base_name)
-            # Create the new path
-            new_path = os.path.join(folder_path, sanitized_name)
-            # Check if the new path already exists
-            if not os.path.exists(new_path):
-                # Rename the file if the new path does not exist
-                os.rename(image_path, new_path)
+            new_path = os.path.join(folder_path, sanitized_name + ext)
+            
+            # Check for conflicts and iterate to find a unique name
+            counter = 1
+            while os.path.exists(new_path):
+                new_path = os.path.join(folder_path, f"{sanitized_name}_{counter}{ext}")
+                counter += 1
+            
+            # Rename the file if the new path does not exist
+            os.rename(image_path, new_path)
             sanitized_paths.append(new_path)
         return sanitized_paths
     
