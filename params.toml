@@ -20,7 +20,7 @@ append_filename_to_captions = true
 rename_output_file = true
 
 [paths]
-input_path = "P:\\datasets\\interface gradient outline"
+input_path = "P:\\datasets\\APP icons"
 spandrel_model_path = "models\\2x_Loyaldk-SuperPony_500000_V2.0.pth"
 
 [llm]
@@ -29,7 +29,7 @@ use_LLM = false
 [augment]
 list = [
 #    {type = "skip_augmentation"},
-    {type = "prepend", value = "lineal color style, ", probability = 1.0}
+    {type = "prepend", value = "app logo, ", probability = 1.0}
 ]
 
 [resolutions]

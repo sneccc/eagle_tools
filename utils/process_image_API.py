@@ -12,6 +12,7 @@ from threading import Lock
 import logging
 import threading
 import re
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -43,22 +44,22 @@ class ProcessImageAPI:
             base_name, ext = os.path.splitext(os.path.basename(image_path))
             # Normalize the filename by removing weird characters
             sanitized_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', base_name)
-            new_path = os.path.join(folder_path, sanitized_name + ext)
             
-            # Check for conflicts and iterate to find a unique name
-            counter = 1
-            while os.path.exists(new_path):
-                new_path = os.path.join(folder_path, f"{sanitized_name}_{counter}{ext}")
-                counter += 1
+            # Generate a unique hash for the filename
+            hash_object = hashlib.sha256(sanitized_name.encode())
+            unique_hash = hash_object.hexdigest()
+            new_path = os.path.join(folder_path, unique_hash + ext)
             
             # Rename the file if the new path does not exist
-            os.rename(image_path, new_path)
+            if not os.path.exists(new_path):
+                os.rename(image_path, new_path)
             sanitized_paths.append(new_path)
         return sanitized_paths
     
     def process_image_batch(self, images_batch, folder_path, basefolder, image_paths_batch, counter, lock, augment=None, queue_pbar=None):
         # Normalize and rename paths
-        normalized_image_paths_batch = self.normalize_and_rename_paths(image_paths_batch, folder_path)
+        #normalized_image_paths_batch = self.normalize_and_rename_paths(image_paths_batch, folder_path)
+        normalized_image_paths_batch = image_paths_batch
         self.process_images(images_batch, folder_path, basefolder, normalized_image_paths_batch, counter, lock, rename_output_file=self.rename_output_file, augment=augment, queue_pbar=queue_pbar)
     
     def create_tags_file(self, annotation, tags, folder_path, output_path, augment=None):
@@ -84,25 +85,35 @@ class ProcessImageAPI:
             if not os.path.exists(image_path):
                 logger.warning(f"Image not found: {image_path}")
                 return
-            output_path = os.path.join(basefolder, f"img_{count:03d}" if self.rename_output_file else image['name'])
+            
+            # Lock the output path determination and existence check
+            with lock:
+                output_path = os.path.join(basefolder, f"img_{count:03d}" if self.rename_output_file else image['name'])
+                if os.path.exists(output_path):
+                    logger.warning(f"Output path already exists: {output_path}")
+                    return
+            
             # Create tags file
             self.create_tags_file(image.get("annotation"), image.get("tags"), folder_path, output_path, augment)
 
             # Process image
             if image['ext'].lower() == "svg":
+                logger.info(f"Processing SVG {image_path}")
                 self._process_svg(image_path, output_path)
             else:
                 self._process_raster(image_path, output_path)
-            
+        
             if global_pbar:
                 with self.progress_lock:
                     global_pbar.update(1)
+                    
         except Exception as e:
             logger.error(f"Error in processing image {image_path}: {e}")
     
     def _process_svg(self, image_path, output_path):
         try:
             img = image_utils.svg_scaling(image_path, 1024, output_path, config.do_center_square_crop, 0.0)
+            
             img.save(f"{os.path.splitext(output_path)[0]}.png", format='PNG', quality=98)
             return img
         except Exception as e:
@@ -111,17 +122,20 @@ class ProcessImageAPI:
     
     def _process_raster(self, image_path, output_path):
         try:
-            #convert to true path
+            # Convert to absolute path
             image_path = os.path.abspath(image_path)
             img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
             if img is None:
                 raise ValueError(f"Failed to load image: {image_path}")
-
+            
             h, w = img.shape[:2]
             min_dimension = 10
             if h < min_dimension or w < min_dimension:
                 raise ValueError(f"Image dimensions too small: {w}x{h}")
 
+            # Detect transparency
+            has_transparency = self._detect_transparency(img)
+            
             # Correct channel organization
             if len(img.shape) == 2:
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
@@ -133,9 +147,12 @@ class ProcessImageAPI:
                 raise ValueError(f"Unexpected number of channels: {img.shape[2]}")
             
             # Handle transparent images
-            if img.shape[2] == 4 and np.any(img[:, :, 3] < 255):
+            if has_transparency:
+                logger.info(f"Filling transparent image {image_path}")
                 img = image_utils.fill_transparent_with_color_cv2(img, config.padding)
-
+            else:
+                logger.info(f"No transparency detected in image {image_path}")
+            
             # Center square crop (if applicable)
             if config.do_center_square_crop:
                 size = min(h, w)
@@ -158,6 +175,12 @@ class ProcessImageAPI:
     
     def _process_without_upscale(self, img, output_path):
         try:
+            # Convert image to RGB color mode
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            h, w, rgb = img.shape
+            if h < 10 or w < 10 or rgb >4:
+                raise ValueError(f"BEFORE: Image dimensions too small: {w}x{h}, with {rgb} rgb channels, output path: {output_path}, shape: {img.shape}")
+                        
             if config.doBucketing:
                 target_resolutions = config.target_resolutions
                 if target_resolutions:
@@ -165,12 +188,13 @@ class ProcessImageAPI:
             else:
                 img = image_utils.upscale_to_1024(img)
 
-            h, w = img.shape[:2]
-            min_dimension = 10
-            if h < min_dimension or w < min_dimension:
-                raise ValueError(f"Resulting image dimensions too small: {w}x{h}")
-
-            cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", img)
+            # Save image in RGB mode
+            cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+            
+            h, w, rgb = img.shape
+            if h < 10 or w < 10 or rgb >4:
+                raise ValueError(f"AFTER: Image dimensions too small: {w}x{h}, with {rgb} rgb channels, output path: {output_path}, shape: {img.shape}")
+            
             return img
         except Exception as e:
             logger.error(f"Error in non-upscaled processing for image {output_path}: {e}")
@@ -207,4 +231,18 @@ class ProcessImageAPI:
         if self.llm_processor:
             self.llm_processor.stop()
         self.upscale_api.stop()
+
+    def _detect_transparency(self, img: np.ndarray) -> bool:
+        # Check if the image has an alpha channel
+        if img.shape[2] == 4:
+            # Extract the alpha channel
+            alpha_channel = img[:, :, 3]
+            
+            # Check for unique values in the alpha channel
+            unique_values = np.unique(alpha_channel)
+            
+            # Detect transparency efficiently
+            has_transparency = len(unique_values) > 1 and np.min(unique_values) < 255
+            return has_transparency
+        return False
 

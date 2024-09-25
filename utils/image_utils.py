@@ -9,19 +9,15 @@ from typing import Tuple
 
 
 def resize_and_crop_to_fit_cv2(img, target_resolutions):
-    """
-    Resize and crop the image to fit the closest target resolution using OpenCV.
-    
-    :param img: OpenCV image (numpy array)
-    :param target_resolutions: List of tuples (width, height)
-    :return: Resized and cropped image
-    """
     original_h, original_w = img.shape[:2]
-    original_aspect = original_w / original_h
+    if original_h <= 10 or original_w <= 10:
+        raise ValueError(f"BEFORE: Image too small: {original_w}x{original_h}")
+    
+    original_aspect = original_w / original_h if original_h != 0 else 1
 
     # Find the closest target resolution
     target_w, target_h = min(target_resolutions, 
-                             key=lambda res: abs(res[0]/res[1] - original_aspect))
+                             key=lambda res: abs((res[0]/res[1]) - original_aspect))
     target_aspect = target_w / target_h
 
     if original_aspect > target_aspect:
@@ -34,47 +30,23 @@ def resize_and_crop_to_fit_cv2(img, target_resolutions):
         new_w, new_h = target_w, int(original_h * scale)
 
     # Resize the image
-    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR )
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+
+    # Ensure correct channel order (BGR to RGB)
+    if len(resized.shape) == 3 and resized.shape[2] == 3:
+        resized = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+    elif len(resized.shape) == 3 and resized.shape[2] == 4:
+        resized = cv2.cvtColor(resized, cv2.COLOR_BGRA2RGBA)
 
     # Crop to final size
-    start_x = (new_w - target_w) // 2
-    start_y = (new_h - target_h) // 2
+    start_x = max((new_w - target_w) // 2, 0)
+    start_y = max((new_h - target_h) // 2, 0)
     cropped = resized[start_y:start_y+target_h, start_x:start_x+target_w]
 
+    if cropped.shape[0] <= 10 or cropped.shape[1] <= 10:
+        raise ValueError(f"AFTER: Image too small: {cropped.shape[1]}x{cropped.shape[0]}")
+    
     return cropped
-
-
-def resize_and_crop_to_fit(image,target_resolutions):
-    original_width, original_height = image.size
-    original_aspect_ratio = original_width / original_height
-
-    # Find the closest target resolution based on aspect ratio
-    closest_diff = float('inf')
-    for target_width, target_height in target_resolutions:
-        target_aspect_ratio = target_width / target_height
-        aspect_ratio_diff = abs(target_aspect_ratio - original_aspect_ratio)
-        
-        if aspect_ratio_diff < closest_diff:
-            closest_diff = aspect_ratio_diff
-            closest_resolution = (target_width, target_height)
-    
-    # Resize image to closest resolution maintaining aspect ratio
-    image_resized = image.resize(closest_resolution, Image.LANCZOS)
-    
-    # Crop to the exact target resolution if necessary
-    resized_width, resized_height = image_resized.size
-    if resized_width != closest_resolution[0] or resized_height != closest_resolution[1]:
-        # Calculate crop area to keep the crop centered
-        left = (resized_width - closest_resolution[0]) / 2
-        top = (resized_height - closest_resolution[1]) / 2
-        right = (resized_width + closest_resolution[0]) / 2
-        bottom = (resized_height + closest_resolution[1]) / 2
-
-        image_cropped = image_resized.crop((left, top, right, bottom))
-    else:
-        image_cropped = image_resized
-
-    return image_cropped
 
 def random_light_color():
     lower = 250
@@ -166,6 +138,8 @@ def svg_scaling(image_path,max_side_length,output_path,do_center_square_crop,fli
     new_height = math.floor(height * scale_factor)
 
     resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+    #fill transparent with color
+    resized_img = fill_transparent_with_color(resized_img, 0)
     resized_img.save(os.path.splitext(output_path)[0] + ".png", format='PNG', quality=98)
 
     os.remove(image_path)

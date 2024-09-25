@@ -94,7 +94,16 @@ class UpscaleAPI:
 
     def _upscale_images(self, imgs):
         logger.debug(f"Upscaling {len(imgs)} images.")
-        tensors = [color_utils.cv2_to_tensor(img) for img in imgs]
+        processed_imgs = []
+        for img in imgs:
+            h, w = img.shape[:2]
+            if h > 1024 or w > 1024:
+                scale = 1024 / max(h, w)
+                new_h, new_w = int(h * scale), int(w * scale)
+                img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            processed_imgs.append(img)
+        
+        tensors = [color_utils.cv2_to_tensor(img) for img in processed_imgs]
         batch_tensor = torch.cat(tensors, dim=0)  
         with torch.no_grad():
             output_batch = self.model(batch_tensor)
