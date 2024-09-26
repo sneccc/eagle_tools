@@ -29,6 +29,8 @@ class UpscaleAPI:
         logger.debug(f"Image queued for upscaling: {output_path}")
     
     def load_model(self):
+        import spandrel_extra_arches
+        spandrel_extra_arches.install(ignore_duplicates=True)
         model = ModelLoader().load_from_file(MODEL_PATH)
         assert isinstance(model, ImageModelDescriptor)
         model.cuda().eval()
@@ -93,22 +95,26 @@ class UpscaleAPI:
             logger.error(f"Error during batch upscaling: {e}")
 
     def _upscale_images(self, imgs):
-        logger.debug(f"Upscaling {len(imgs)} images.")
+        logger.debug(f"Processing {len(imgs)} images.")
         processed_imgs = []
         for img in imgs:
-            h, w = img.shape[:2]
-            if h > 1024 or w > 1024:
-                scale = 1024 / max(h, w)
-                new_h, new_w = int(h * scale), int(w * scale)
-                img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
             processed_imgs.append(img)
         
-        tensors = [color_utils.cv2_to_tensor(img) for img in processed_imgs]
-        batch_tensor = torch.cat(tensors, dim=0)  
-        with torch.no_grad():
-            output_batch = self.model(batch_tensor)
-            upscaled_images = [color_utils.tensor_to_cv2(tensor.squeeze(0)) for tensor in output_batch]
-        return upscaled_images
+        to_upscale = [img for img in processed_imgs if img.shape[0] * img.shape[1] < 1024 * 1024]
+        
+        if to_upscale:
+            tensors = [color_utils.cv2_to_tensor(img) for img in to_upscale]
+            batch_tensor = torch.cat(tensors, dim=0)  
+            with torch.no_grad():
+                output_batch = self.model(batch_tensor)
+                upscaled_images = [color_utils.tensor_to_cv2(tensor.squeeze(0)) for tensor in output_batch]
+            
+            # Replace the smaller images with their upscaled versions
+            for i, img in enumerate(processed_imgs):
+                if img.shape[0] * img.shape[1] < 1024 * 1024:
+                    processed_imgs[i] = upscaled_images.pop(0)
+        
+        return processed_imgs
 
     def stop(self):
         self.stop_event.set()

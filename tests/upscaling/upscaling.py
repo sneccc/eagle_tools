@@ -5,15 +5,17 @@ import cv2
 import numpy as np
 
 # Add the parent directory to the sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from spandrel import ModelLoader, ImageModelDescriptor
 from utils.config import spandrel_model_path
-
+import spandrel_extra_arches
+spandrel_extra_arches.install()
 model = ModelLoader().load_from_file(spandrel_model_path)
 
 assert isinstance(model, ImageModelDescriptor)
 model.cuda().eval()
+
 
 if __name__ == "__main__":
     def process(image: torch.Tensor) -> torch.Tensor:
@@ -43,7 +45,7 @@ def open_image(image_path: str) -> torch.Tensor:
 
     return image
 
-output = process(open_image("vector_white.png"))
+output = process(open_image("../input/vector_white.png"))
 
 #save image
 cv2.imwrite(

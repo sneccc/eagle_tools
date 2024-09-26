@@ -14,22 +14,22 @@ doUpscale = true
 gpuid = 0
 
 [caption_processing]
-add_tags = false
+add_tags = true
 shuffle_content = false
 append_filename_to_captions = true
 rename_output_file = true
 
 [paths]
 input_path = "P:\\datasets\\APP icons"
-spandrel_model_path = "models\\2x_Loyaldk-SuperPony_500000_V2.0.pth"
-
+#spandrel_model_path = "models\\2x_Loyaldk-SuperPony_500000_V2.0.pth"
+spandrel_model_path = "models\\2xHFA2kAVCSRFormer_light.pth"
 [llm]
 use_LLM = false
 
 [augment]
 list = [
 #    {type = "skip_augmentation"},
-    {type = "prepend", value = "app logo, ", probability = 1.0}
+    {type = "prepend", value = "@app_logo, ", probability = 1.0}
 ]
 
 [resolutions]
