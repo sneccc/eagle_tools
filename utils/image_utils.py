@@ -8,7 +8,7 @@ import numpy as np
 from typing import Tuple
 
 
-def resize_and_crop_to_fit_cv2(img, target_resolutions):
+def resize_and_crop_to_fit_cv2(img, target_resolutions, is_pixelart):
     original_h, original_w = img.shape[:2]
     if original_h <= 10 or original_w <= 10:
         raise ValueError(f"BEFORE: Image too small: {original_w}x{original_h}")
@@ -30,7 +30,8 @@ def resize_and_crop_to_fit_cv2(img, target_resolutions):
         new_w, new_h = target_w, int(original_h * scale)
 
     # Resize the image
-    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    interpolation = cv2.INTER_NEAREST if is_pixelart else cv2.INTER_LINEAR
+    resized = cv2.resize(img, (new_w, new_h), interpolation=interpolation)
 
     # Ensure correct channel order (BGR to RGB)
     if len(resized.shape) == 3 and resized.shape[2] == 3:
@@ -147,18 +148,18 @@ def svg_scaling(image_path,max_side_length,output_path,do_center_square_crop,fli
 
 
 
-def upscale_to_1024(img: np.ndarray) -> np.ndarray:
+def upscale_to_1024(img: np.ndarray,target_size,is_pixelart) -> np.ndarray:
     assert img.ndim == 4, "Expected a batch of images"
     batch_size, height, width, channels = img.shape
     target_sizes = [
         (
-            math.floor(width * 1024 / min(width, height)),
-            math.floor(height * 1024 / min(width, height))
+            math.floor(width * target_size[0] / min(width, height)),
+            math.floor(height * target_size[1] / min(width, height))
         )
         for _ in range(batch_size)
     ]
     upscaled_imgs = np.array([
-        cv2.resize(img[i], target_sizes[i], interpolation=cv2.INTER_AREA)
+        cv2.resize(img[i], target_sizes[i], interpolation=cv2.INTER_NEAREST if is_pixelart else cv2.INTER_LINEAR)
         for i in range(batch_size)
     ])
     return upscaled_imgs

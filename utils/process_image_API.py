@@ -82,6 +82,8 @@ class ProcessImageAPI:
     
     def process_image(self, image, folder_path, basefolder, image_path, count, lock, augment=None, global_pbar=None):
         try:
+            #transform image_path to absolute path
+            image_path = os.path.abspath(image_path)
             if not os.path.exists(image_path):
                 logger.warning(f"Image not found: {image_path}")
                 return
@@ -89,6 +91,8 @@ class ProcessImageAPI:
             # Lock the output path determination and existence check
             with lock:
                 output_path = os.path.join(basefolder, f"img_{count:03d}" if self.rename_output_file else image['name'])
+                #transform output_path to absolute path
+                output_path = os.path.abspath(output_path)
                 if os.path.exists(output_path):
                     logger.warning(f"Output path already exists: {output_path}")
                     return
@@ -133,18 +137,21 @@ class ProcessImageAPI:
             if h < min_dimension or w < min_dimension:
                 raise ValueError(f"Image dimensions too small: {w}x{h}")
 
-            # Detect transparency
-            has_transparency = self._detect_transparency(img)
-            
-            # Correct channel organization
-            if len(img.shape) == 2:
+            # Detect transparency and correct channel organization
+            if len(img.shape) == 2:  # Grayscale image
+                has_transparency = False
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-            elif img.shape[2] == 3:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            elif img.shape[2] == 4:
-                img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+            elif len(img.shape) == 3:
+                if img.shape[2] == 3:  # RGB image
+                    has_transparency = False
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                elif img.shape[2] == 4:  # RGBA image
+                    has_transparency = self._detect_transparency(img)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+                else:
+                    raise ValueError(f"Unexpected number of channels: {img.shape[2]}")
             else:
-                raise ValueError(f"Unexpected number of channels: {img.shape[2]}")
+                raise ValueError(f"Unexpected image shape: {img.shape}")
             
             # Handle transparent images
             if has_transparency:
@@ -164,42 +171,47 @@ class ProcessImageAPI:
                 try:
                     self.upscale_api.queue_image(img=img, output_path=output_path)
                 except Exception as upscale_error:
-                    print(f"Error in upscaling image {image_path}: {upscale_error}")
-                    print("Falling back to non-upscaled processing.")
-                    self._process_without_upscale(img, output_path)
+                    logger.error(f"Error in upscaling image {image_path}: {upscale_error}")
+                    logger.error("Falling back to non-upscaled processing.")
+                    
+                    img=self._process_without_upscale(img, output_path)
+                    path = f"{os.path.splitext(output_path)[0]}.png"
+                    cv2.imwrite(path, img)
             else:
-                self._process_without_upscale(img, output_path)
+                img=self._process_without_upscale(img, output_path)
+                path = f"{os.path.splitext(output_path)[0]}.png"
+                cv2.imwrite(path, img)
         except Exception as e:
             logger.error(f"Error processing raster image {image_path}: {e}")
+            if 'img' in locals():
+                logger.error(f"Image shape: {img.shape}")
             return None
     
     def _process_without_upscale(self, img, output_path):
         try:
-            # Convert image to RGB color mode
+
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            h, w, rgb = img.shape
-            if h < 10 or w < 10 or rgb >4:
-                raise ValueError(f"BEFORE: Image dimensions too small: {w}x{h}, with {rgb} rgb channels, output path: {output_path}, shape: {img.shape}")
-                        
             if config.doBucketing:
                 target_resolutions = config.target_resolutions
                 if target_resolutions:
-                    img = image_utils.resize_and_crop_to_fit_cv2(img, target_resolutions)
+                    img = image_utils.resize_and_crop_to_fit_cv2(img, target_resolutions,config.pixelart)
             else:
-                img = image_utils.upscale_to_1024(img)
+                img = np.expand_dims(img, axis=0)
+                img = image_utils.upscale_to_1024(img,config.pixelart_target,config.pixelart)
+                img = img.squeeze(axis=0)
 
-            # Save image in RGB mode
-            cv2.imwrite(f"{os.path.splitext(output_path)[0]}.png", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             
-            h, w, rgb = img.shape
-            if h < 10 or w < 10 or rgb >4:
-                raise ValueError(f"AFTER: Image dimensions too small: {w}x{h}, with {rgb} rgb channels, output path: {output_path}, shape: {img.shape}")
+           
+
             
             return img
         except Exception as e:
-            logger.error(f"Error in non-upscaled processing for image {output_path}: {e}")
+            logger.error(f"Error in non-upscaled processing for image {output_path}: {e}, with shape: {img.shape}")
             return None
-    
+        
+
+
     def process_images(self, images, folder_path, basefolder, image_paths, counter, lock, rename_output_file=True, augment=None, queue_pbar=None):
         with ThreadPoolExecutor(max_workers=config.number_of_jobs) as executor:
             futures = []
